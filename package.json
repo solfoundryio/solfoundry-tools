@@ -24,10 +24,12 @@
   "scripts": {
     "inspect-pool": "tsx scripts/inspect-pool.ts",
     "read-attribution": "tsx examples/read-launch-attribution.ts",
-    "typecheck": "tsc --noEmit"
+    "verify-lp-lock": "tsx examples/verify-lp-lock.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
-    "@meteora-ag/cp-amm-sdk": "^1.5.0",
+    "@meteora-ag/cp-amm-sdk": "^1.4.3",
     "@solana/web3.js": "^1.95.0"
   },
   "devDependencies": {
