@@ -9,37 +9,52 @@
  * Usage:
  *   npx tsx scripts/inspect-pool.ts <poolId> [network]
  *     network: "devnet" (default) or "mainnet-beta"
+ *
+ * Env:
+ *   SOLFOUNDRY_TOOLS_RPC_URL — override the default public RPC for the
+ *                              selected network (e.g. a private endpoint).
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { CpAmm } from '@meteora-ag/cp-amm-sdk';
+import { getConnection, parseNetwork } from '../src/lib/connection';
+import { describeActivation, formatDuration, formatPercent } from '../src/lib/format';
+import { decodeFeeScheduler } from '../src/lib/fee-scheduler';
+
+function usageAndExit(): never {
+  console.error('Usage: npx tsx scripts/inspect-pool.ts <poolId> [network]');
+  console.error('  network: "devnet" (default) or "mainnet-beta"');
+  process.exit(1);
+}
 
 async function main() {
   const poolIdArg = process.argv[2];
-  const network = (process.argv[3] || 'devnet') as 'devnet' | 'mainnet-beta';
+  if (!poolIdArg) usageAndExit();
 
-  if (!poolIdArg) {
-    console.error('Usage: npx tsx scripts/inspect-pool.ts <poolId> [network]');
+  let network: ReturnType<typeof parseNetwork>;
+  try {
+    network = parseNetwork(process.argv[3]);
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e));
+    usageAndExit();
+  }
+
+  let poolId: PublicKey;
+  try {
+    poolId = new PublicKey(poolIdArg);
+  } catch {
+    console.error(`"${poolIdArg}" is not a valid Solana public key.`);
     process.exit(1);
   }
 
-  const rpcUrl =
-    network === 'mainnet-beta'
-      ? 'https://api.mainnet-beta.solana.com'
-      : 'https://api.devnet.solana.com';
-
-  const connection = new Connection(rpcUrl, 'confirmed');
-  const poolId = new PublicKey(poolIdArg);
+  const connection = getConnection(network);
   const cpAmm = new CpAmm(connection);
 
   console.log(`\nInspecting pool ${poolIdArg} on ${network}\n`);
 
   const state = await cpAmm.fetchPoolState(poolId);
 
-  const activationPointBN = state.activationPoint;
-  const activationSeconds = activationPointBN ? Number(activationPointBN.toString()) : 0;
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const deltaSeconds = activationSeconds - nowSeconds;
+  const activationSeconds = state.activationPoint ? Number(state.activationPoint.toString()) : 0;
 
   console.log('-- Pool basics --');
   console.log(`  Token A mint: ${state.tokenAMint.toBase58()}`);
@@ -53,56 +68,34 @@ async function main() {
 
   console.log('\n-- Activation (Fair Launch Window) --');
   console.log(`  activationPoint: ${activationSeconds} (unix seconds)`);
-  if (activationSeconds === 0) {
-    console.log('  Status: NO GATE — trading open since pool creation');
-  } else if (deltaSeconds > 0) {
-    const mins = Math.floor(deltaSeconds / 60);
-    const secs = deltaSeconds % 60;
-    console.log(
-      `  Status: GATED — opens in ${mins}m ${secs}s (${new Date(activationSeconds * 1000).toISOString()})`,
-    );
-  } else {
-    const ago = -deltaSeconds;
-    const mins = Math.floor(ago / 60);
-    console.log(
-      `  Status: OPEN — opened ${mins}m ago (${new Date(activationSeconds * 1000).toISOString()})`,
-    );
+  const activation = describeActivation(activationSeconds);
+  if (activation) {
+    console.log(`  Status: ${activation.label}`);
   }
 
   console.log('\n-- Fees --');
-  // Meteora SDK stores fee scheduler params as raw bytes in baseFeeInfo.data.
-  // Layout (32 bytes total, little-endian):
-  //   [0..8]   cliffFeeNumerator (u64) — fee at t=0, divided by FEE_DENOMINATOR (1e9)
-  //   [8]      feeSchedulerMode (u8)   — 0=Linear, 1=Exponential
-  //   [9..14]  padding
-  //   [14..16] numberOfPeriod (u16)
-  //   [16..24] periodFrequency (u64)   — seconds per step
-  //   [24..32] reductionFactor (u64)
   const data: number[] = state.poolFees?.baseFee?.baseFeeInfo?.data ?? [];
-  if (data.length >= 32) {
-    const buf = Buffer.from(data);
-    const cliffFeeNumerator = buf.readBigUInt64LE(0);
-    const feeSchedulerMode = buf.readUInt8(8);
-    const numberOfPeriod = buf.readUInt16LE(14);
-    const periodFrequency = buf.readBigUInt64LE(16);
-    const reductionFactor = buf.readBigUInt64LE(24);
-
-    const FEE_DENOMINATOR = 1_000_000_000n;
-    const startFeePct = (Number(cliffFeeNumerator) / Number(FEE_DENOMINATOR)) * 100;
-    const totalDuration = Number(periodFrequency) * numberOfPeriod;
-    const modeName =
-      feeSchedulerMode === 1 ? 'Exponential' : feeSchedulerMode === 0 ? 'Linear' : `Unknown(${feeSchedulerMode})`;
-
-    console.log(`  Mode: ${modeName}`);
-    console.log(`  Start fee: ${startFeePct.toFixed(2)}% (cliffFeeNumerator: ${cliffFeeNumerator})`);
-    console.log(`  Number of periods: ${numberOfPeriod}`);
-    console.log(`  Period frequency: ${periodFrequency}s`);
-    console.log(`  Total duration: ${totalDuration}s (${(totalDuration / 60).toFixed(1)}min)`);
-    console.log(`  Reduction factor: ${reductionFactor}`);
-  } else if (data.length === 0) {
-    console.log('  Standard flat fee (no scheduler)');
-  } else {
-    console.log(`  Unexpected baseFeeInfo length: ${data.length} bytes`);
+  const scheduler = decodeFeeScheduler(data);
+  switch (scheduler.kind) {
+    case 'flat':
+      console.log('  Standard flat fee (no scheduler)');
+      break;
+    case 'unknown':
+      console.log(`  Unexpected baseFeeInfo length: ${scheduler.byteLength} bytes`);
+      break;
+    case 'scheduler': {
+      console.log(`  Mode: ${scheduler.mode}`);
+      console.log(
+        `  Start fee: ${formatPercent(scheduler.startFeeFraction)} (cliffFeeNumerator: ${scheduler.cliffFeeNumerator})`,
+      );
+      console.log(`  Number of periods: ${scheduler.numberOfPeriod}`);
+      console.log(`  Period frequency: ${scheduler.periodFrequencySec}s`);
+      console.log(
+        `  Total duration: ${scheduler.totalDurationSec}s (${formatDuration(scheduler.totalDurationSec)})`,
+      );
+      console.log(`  Reduction factor: ${scheduler.reductionFactor}`);
+      break;
+    }
   }
 
   console.log('\n-- Authorities & flags --');
@@ -114,6 +107,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Failed to inspect pool:', err);
+  console.error('Failed to inspect pool:', err instanceof Error ? err.message : err);
   process.exit(1);
 });

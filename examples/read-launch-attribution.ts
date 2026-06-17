@@ -18,7 +18,8 @@
  *     network: "devnet" (default) or "mainnet-beta"
  */
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
+import { getConnection, parseNetwork } from '../src/lib/connection';
 
 const METAPLEX_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 
@@ -78,20 +79,30 @@ function decodeUri(data: Buffer): string {
 
 async function main() {
   const mintArg = process.argv[2];
-  const network = (process.argv[3] || 'devnet') as 'devnet' | 'mainnet-beta';
 
   if (!mintArg) {
     console.error('Usage: npx tsx examples/read-launch-attribution.ts <mintAddress> [network]');
+    console.error('  network: "devnet" (default) or "mainnet-beta"');
     process.exit(1);
   }
 
-  const rpcUrl =
-    network === 'mainnet-beta'
-      ? 'https://api.mainnet-beta.solana.com'
-      : 'https://api.devnet.solana.com';
+  let network: ReturnType<typeof parseNetwork>;
+  try {
+    network = parseNetwork(process.argv[3]);
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exit(1);
+  }
 
-  const connection = new Connection(rpcUrl, 'confirmed');
-  const mint = new PublicKey(mintArg);
+  let mint: PublicKey;
+  try {
+    mint = new PublicKey(mintArg);
+  } catch {
+    console.error(`"${mintArg}" is not a valid Solana public key.`);
+    process.exit(1);
+  }
+
+  const connection = getConnection(network);
   const metadataPda = findMetadataPda(mint);
 
   console.log(`\nMint:        ${mint.toBase58()}`);
