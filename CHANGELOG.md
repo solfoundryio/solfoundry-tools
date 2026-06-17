@@ -15,6 +15,7 @@ once a 1.0 contract is declared.
 - README badges (license, Node version, PRs welcome, tests, Solana).
 - `CONTRIBUTING.md`.
 - Unit tests for `src/lib/connection.ts`, `src/lib/format.ts`, and `src/lib/fee-scheduler.ts` using the built-in `node:test` runner via `tsx`. Run with `npm test`.
+- GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `npm ci`, `npm run typecheck`, and `npm test` against Node 18, 20, and 22 on every push and pull request targeting `main`. Status badge added to the README.
 
 ### Changed
 - `scripts/inspect-pool.ts` refactored to use the shared lib helpers. Output is unchanged; the script is now noticeably shorter and easier to maintain.

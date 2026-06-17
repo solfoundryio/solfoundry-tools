@@ -1,5 +1,6 @@
 # solfoundry-tools
 
+[![CI](https://github.com/solfoundryio/solfoundry-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/solfoundryio/solfoundry-tools/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 [![Node ≥18](https://img.shields.io/badge/node-%E2%89%A518-blue.svg)](package.json)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-orange.svg)](CONTRIBUTING.md)
