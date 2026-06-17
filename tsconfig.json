@@ -14,6 +14,6 @@
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["scripts/**/*", "examples/**/*"],
+  "include": ["scripts/**/*", "examples/**/*", "src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
