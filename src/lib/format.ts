@@ -34,6 +34,9 @@ export function formatPercent(value: number, fractionDigits = 2): string {
  * Compare a target unix-seconds timestamp against now and produce a
  * human-readable "GATED — opens in 2m 15s" or "OPEN — opened 8m ago" label.
  * Returns null when the target is the zero-sentinel (no gate).
+ *
+ * Only valid for pools with activationType = Timestamp (1). Slot-activated
+ * pools store a slot number in activationPoint — use describeSlotActivation.
  */
 export function describeActivation(
   activationSeconds: number,
@@ -49,4 +52,34 @@ export function describeActivation(
     return { status: 'gated', label: `GATED — opens in ${formatDuration(delta)} (${iso})` };
   }
   return { status: 'open', label: `OPEN — opened ${formatDuration(-delta)} ago (${iso})` };
+}
+
+/** Solana's target slot time. Real slot times drift, so any duration derived
+ *  from this is an estimate and is labelled as such in output. */
+const APPROX_SECONDS_PER_SLOT = 0.4;
+
+/**
+ * Same idea as describeActivation, but for pools with activationType = Slot
+ * (0), where activationPoint is a slot number, not a timestamp. Durations are
+ * approximate (slot times vary around the 400ms target).
+ */
+export function describeSlotActivation(
+  activationSlot: number,
+  currentSlot: number,
+): { label: string; status: 'no-gate' | 'gated' | 'open' } | null {
+  if (activationSlot === 0) {
+    return { status: 'no-gate', label: 'NO GATE — trading open since pool creation' };
+  }
+  const deltaSlots = activationSlot - currentSlot;
+  const approxSeconds = Math.round(Math.abs(deltaSlots) * APPROX_SECONDS_PER_SLOT);
+  if (deltaSlots > 0) {
+    return {
+      status: 'gated',
+      label: `GATED — opens at slot ${activationSlot} (${deltaSlots} slots away, ~${formatDuration(approxSeconds)})`,
+    };
+  }
+  return {
+    status: 'open',
+    label: `OPEN — opened at slot ${activationSlot} (${-deltaSlots} slots ago, ~${formatDuration(approxSeconds)})`,
+  };
 }

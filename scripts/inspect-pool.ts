@@ -18,7 +18,12 @@
 import { PublicKey } from '@solana/web3.js';
 import { CpAmm } from '@meteora-ag/cp-amm-sdk';
 import { getConnection, parseNetwork } from '../src/lib/connection';
-import { describeActivation, formatDuration, formatPercent } from '../src/lib/format';
+import {
+  describeActivation,
+  describeSlotActivation,
+  formatDuration,
+  formatPercent,
+} from '../src/lib/format';
 import { decodeFeeScheduler } from '../src/lib/fee-scheduler';
 
 function usageAndExit(): never {
@@ -54,7 +59,11 @@ async function main() {
 
   const state = await cpAmm.fetchPoolState(poolId);
 
-  const activationSeconds = state.activationPoint ? Number(state.activationPoint.toString()) : 0;
+  // activationPoint's unit depends on activationType: 0 = slot number,
+  // 1 = unix timestamp. Reading a slot as a timestamp produces nonsense
+  // labels ("opens in 54 years"), so branch before formatting.
+  const activationPoint = state.activationPoint ? Number(state.activationPoint.toString()) : 0;
+  const isSlotActivation = state.activationType === 0;
 
   console.log('-- Pool basics --');
   console.log(`  Token A mint: ${state.tokenAMint.toBase58()}`);
@@ -67,8 +76,12 @@ async function main() {
   );
 
   console.log('\n-- Activation (Fair Launch Window) --');
-  console.log(`  activationPoint: ${activationSeconds} (unix seconds)`);
-  const activation = describeActivation(activationSeconds);
+  console.log(
+    `  activationPoint: ${activationPoint} (${isSlotActivation ? 'slot number' : 'unix seconds'})`,
+  );
+  const activation = isSlotActivation
+    ? describeSlotActivation(activationPoint, await connection.getSlot())
+    : describeActivation(activationPoint);
   if (activation) {
     console.log(`  Status: ${activation.label}`);
   }

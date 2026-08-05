@@ -1,7 +1,12 @@
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import { describeActivation, formatDuration, formatPercent } from '../src/lib/format';
+import {
+  describeActivation,
+  describeSlotActivation,
+  formatDuration,
+  formatPercent,
+} from '../src/lib/format';
 
 describe('formatDuration', () => {
   it('renders seconds when under a minute', () => {
@@ -59,5 +64,30 @@ describe('describeActivation', () => {
     assert.ok(result);
     assert.equal(result.status, 'open');
     assert.match(result.label, /opened 3m ago/);
+  });
+});
+
+describe('describeSlotActivation', () => {
+  it('reports NO GATE when activation is the zero sentinel', () => {
+    const result = describeSlotActivation(0, 250_000_000);
+    assert.ok(result);
+    assert.equal(result.status, 'no-gate');
+  });
+
+  it('reports GATED with slot count and an approximate duration', () => {
+    // 300 slots ahead at ~0.4s per slot is ~120s.
+    const result = describeSlotActivation(250_000_300, 250_000_000);
+    assert.ok(result);
+    assert.equal(result.status, 'gated');
+    assert.match(result.label, /slot 250000300/);
+    assert.match(result.label, /300 slots away/);
+    assert.match(result.label, /~2m/);
+  });
+
+  it('reports OPEN when the activation slot has passed', () => {
+    const result = describeSlotActivation(249_999_700, 250_000_000);
+    assert.ok(result);
+    assert.equal(result.status, 'open');
+    assert.match(result.label, /300 slots ago/);
   });
 });
