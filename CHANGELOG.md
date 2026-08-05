@@ -8,6 +8,9 @@ once a 1.0 contract is declared.
 ## [Unreleased]
 
 ### Added
+- `describeSlotActivation` in `src/lib/format.ts` for pools with slot-based activation, with unit tests.
+- `SECURITY.md` with a private reporting channel.
+- Dependabot config for npm dependencies and GitHub Actions (monthly).
 - `examples/verify-lp-lock.ts` — on-chain check that liquidity is permanently locked on any Meteora DAMM v2 pool. Exits with a clear status code so it can be wired into CI or trust dashboards.
 - `src/lib/connection.ts` — shared RPC URL + network parsing. Supports `SOLFOUNDRY_TOOLS_RPC_URL` env override for private endpoints.
 - `src/lib/format.ts` — `formatDuration`, `formatPercent`, `describeActivation` helpers used by the scripts.
@@ -22,7 +25,12 @@ once a 1.0 contract is declared.
 - `examples/read-launch-attribution.ts` refactored to share the connection + network parsing helpers and to report invalid pubkey inputs with a clear message instead of a stack trace.
 - Network argument parsing is now strict — unknown values fail with a helpful error rather than silently falling back to devnet.
 
+### Changed (infrastructure)
+- CI matrix moved from Node 18/20/22 to 20/22/24 (Node 18 reached end of life in April 2025). `engines.node` and the README badge now say ≥20.
+- The CI workflow token is now read-only (`permissions: contents: read`).
+
 ### Fixed
+- `scripts/inspect-pool.ts` read `activationPoint` as a unix timestamp regardless of `activationType`. Slot-activated pools (activationType 0) store a slot number there, so the gate status and date label were wrong for them. The script now branches on the type and reports slot activation with an approximate duration.
 - Lowered the `@meteora-ag/cp-amm-sdk` dependency to the latest published version (`^1.4.3`). The previous pin (`^1.5.0`) referenced an unpublished tag.
 
 ## [0.1.0] — 2026-05-02

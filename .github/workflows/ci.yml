@@ -11,6 +11,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only token: this workflow only checks out and runs tests.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Typecheck + tests
@@ -18,7 +22,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        # Node 18 reached end of life in April 2025 and left the matrix.
+        node-version: [20.x, 22.x, 24.x]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

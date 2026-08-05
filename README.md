@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/solfoundryio/solfoundry-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/solfoundryio/solfoundry-tools/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Node ≥18](https://img.shields.io/badge/node-%E2%89%A518-blue.svg)](package.json)
+[![Node ≥20](https://img.shields.io/badge/node-%E2%89%A520-blue.svg)](package.json)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-orange.svg)](CONTRIBUTING.md)
 [![Tests](https://img.shields.io/badge/tests-node%3Atest-success.svg)](tests)
 [![Solana](https://img.shields.io/badge/Solana-mainnet%20%2B%20devnet-9945FF.svg)](https://solana.com)
@@ -32,7 +32,7 @@ docs/anti-sniper-math.md             how the fee decay curve works and why it ki
 
 ## Requirements
 
-- Node.js ≥ 18
+- Node.js ≥ 20
 - npm (or your package manager of choice)
 
 ## Quick start
@@ -102,6 +102,7 @@ MIT. See [`LICENSE`](LICENSE).
 
 ## Related
 
+- Rug check: [solfoundry.io/rug-check](https://solfoundry.io/rug-check) runs a full safety report for any Solana token, same read-only philosophy as these scripts
 - Product: [solfoundry.io](https://solfoundry.io)
 - Docs: [solfoundry.io/docs](https://solfoundry.io/docs)
 - X: [@SolFoundryio](https://x.com/SolFoundryio)
