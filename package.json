@@ -29,13 +29,13 @@
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
-    "@meteora-ag/cp-amm-sdk": "^1.4.3",
-    "@solana/web3.js": "^1.95.0"
+    "@meteora-ag/cp-amm-sdk": "^1.4.10",
+    "@solana/web3.js": "^1.99.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "tsx": "^4.7.0",
-    "typescript": "^5.4.0"
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=20"
